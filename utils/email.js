@@ -11,10 +11,16 @@ const fromEmail = process.env.EMAIL_USER;
 const appPassword = process.env.EMAIL_PASS;
 
 // Native SMTP Function - 0 external libraries
+// Native SMTP Function - 0 external libraries
 const sendNativeEmail = (toEmail, toName, subject, htmlContent) => {
     return new Promise((resolve, reject) => {
-        // Port 465 for secure TLS connection
-        const socket = tls.connect(465, 'smtp.gmail.com', () => {
+        
+        // Pass the connection details as an object and strictly enforce IPv4
+        const socket = tls.connect({
+            host: 'smtp.gmail.com',
+            port: 465,
+            family: 4 // Forces IPv4 (bypasses Render's IPv6 block)
+        }, () => {
             console.log('Connected to Gmail Server...');
         });
 
