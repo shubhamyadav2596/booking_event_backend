@@ -1,5 +1,9 @@
 const tls = require('tls');
 const dotenv = require('dotenv');
+const dns = require('node:dns'); // <-- 1. Import the native DNS module
+
+// <-- 2. Force IPv4 resolution globally for this script to fix Render's ENETUNREACH error
+dns.setDefaultResultOrder('ipv4first'); 
 
 dotenv.config();
 
