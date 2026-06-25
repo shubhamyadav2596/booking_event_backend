@@ -1,20 +1,32 @@
-const nodemailer = require('nodemailer');
+// const { Resend } = require('resend');
 const dotenv = require('dotenv');
 
 dotenv.config();
 
+// const resend = new Resend(process.env.RESEND_API_KEY);
+// const fromEmail = process.env.EMAIL_USER || 'onboarding@resend.dev';
+const fromEmail = process.env.EMAIL_USER || 'onboarding@resend.dev';
+
+// SMTP server option (Nodemailer/Gmail) - uncomment if you want to use SMTP again.
+const nodemailer = require('nodemailer');
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true, // Use True for port 465, false for port 587
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
+    },
+    tls: {
+        // This prevents Render from rejecting self-signed certificates common in cloud routing
+        rejectUnauthorized: false 
     }
 });
 
 const sendBookingEmail = async (userEmail, userName, eventTitle) => {
     try {
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
+        const emailOptions = {
+            from: fromEmail,
             to: userEmail,
             subject: `Booking Confirmed: ${eventTitle}`,
             html: `
@@ -23,7 +35,9 @@ const sendBookingEmail = async (userEmail, userName, eventTitle) => {
         <p>Thank you for choosing Eventora.</p>
       `
         };
-        await transporter.sendMail(mailOptions);
+
+        // await resend.emails.send(emailOptions);
+        await transporter.sendMail(emailOptions);
         console.log('Email sent successfully to', userEmail);
     } catch (error) {
         console.error('Error sending email:', error);
@@ -37,8 +51,8 @@ const sendOTPEmail = async (userEmail, otp, type) => {
             ? 'Please use the following OTP to verify your new Eventora account.'
             : 'Please use the following OTP to verify and confirm your event booking.';
 
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
+        const emailOptions = {
+            from: fromEmail,
             to: userEmail,
             subject: title,
             html: `
@@ -52,7 +66,9 @@ const sendOTPEmail = async (userEmail, otp, type) => {
                 </div>
             `
         };
-        await transporter.sendMail(mailOptions);
+
+        // await resend.emails.send(emailOptions);
+        await transporter.sendMail(emailOptions);
         console.log(`OTP sent to ${userEmail} for ${type}`);
     } catch (error) {
         console.error('Error sending OTP email:', error);
