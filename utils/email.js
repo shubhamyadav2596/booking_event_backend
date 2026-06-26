@@ -6,7 +6,7 @@ dotenv.config();
 
 // const resend = new Resend(process.env.RESEND_API_KEY);
 // const fromEmail = process.env.EMAIL_USER || 'onboarding@resend.dev';
-const fromEmail = process.env.EMAIL_USER || 'onboarding@resend.dev';
+const fromEmail = process.env.EMAIL_USER || 'sy8692935@gmail.com';
 
 // SMTP server option (Nodemailer/Gmail) - uncomment if you want to use SMTP again.
 const nodemailer = require('nodemailer');
