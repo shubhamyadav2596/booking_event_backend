@@ -10,15 +10,13 @@ const eventRoutes = require('./routes/events');
 const bookingRoutes = require('./routes/bookings');
 
 const app = express();
-const corsOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
-  .split(',')
-  .map((origin) => origin.trim())
-  .filter(Boolean);
 
+// Middlewaconst corsOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
+ 
 // Middleware
 app.use(
   cors({
-    origin: corsOrigins,
+    origin: 'http://localhost:5173',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
@@ -35,7 +33,7 @@ app.use('/api/events', eventRoutes);
 app.use('/api/bookings', bookingRoutes);
 
 // Database Connection
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/eventora';
+const MONGO_URI = process.env.MONGO_URI;
 
 let cached = global.mongoose;
 
