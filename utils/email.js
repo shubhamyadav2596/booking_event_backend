@@ -1,81 +1,47 @@
-const tls = require('tls');
-const dotenv = require('dotenv');
-const dns = require('node:dns'); // <-- 1. Import the native DNS module
 
-// <-- 2. Force IPv4 resolution globally for this script to fix Render's ENETUNREACH error
-dns.setDefaultResultOrder('ipv4first'); 
+// const { Resend } = require('resend');
+const dotenv = require('dotenv');
 
 dotenv.config();
 
-const fromEmail = process.env.EMAIL_USER;
-const appPassword = process.env.EMAIL_PASS;
+// const resend = new Resend(process.env.RESEND_API_KEY);
+// const fromEmail = process.env.EMAIL_USER || 'onboarding@resend.dev';
+const fromEmail = process.env.EMAIL_USER || 'onboarding@resend.dev';
 
-// Native SMTP Function - 0 external libraries
-// Native SMTP Function - 0 external libraries
-const sendNativeEmail = (toEmail, toName, subject, htmlContent) => {
-    return new Promise((resolve, reject) => {
-        
-        // Pass the connection details as an object and strictly enforce IPv4
-        const socket = tls.connect({
-            host: 'smtp.gmail.com',
-            port: 465,
-            family: 4 // Forces IPv4 (bypasses Render's IPv6 block)
-        }, () => {
-            console.log('Connected to Gmail Server...');
-        });
-
-        let step = 0;
-        let serverResponse = '';
-
-        // SMTP protocol commands
-        const commands = [
-            `EHLO localhost\r\n`,
-            `AUTH LOGIN\r\n`,
-            `${Buffer.from(fromEmail).toString('base64')}\r\n`,
-            `${Buffer.from(appPassword).toString('base64')}\r\n`,
-            `MAIL FROM:<${fromEmail}>\r\n`,
-            `RCPT TO:<${toEmail}>\r\n`,
-            `DATA\r\n`,
-            `From: "Eventora" <${fromEmail}>\r\nTo: ${toName} <${toEmail}>\r\nSubject: ${subject}\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n${htmlContent}\r\n.\r\n`,
-            `QUIT\r\n`
-        ];
-
-        socket.on('data', (data) => {
-            serverResponse += data.toString();
-            
-            // Check if server is ready for the next command (Ends with 3 digits and a space)
-            if (serverResponse.match(/(?:^|\n)\d{3} /)) {
-                if (step < commands.length) {
-                    socket.write(commands[step]);
-                    step++;
-                    serverResponse = ''; // Clear for next response
-                } else {
-                    socket.end();
-                    resolve(true);
-                }
-            }
-        });
-
-        socket.on('error', (error) => {
-            console.error('SMTP Error:', error);
-            reject(error);
-        });
-    });
-};
+// SMTP server option (Nodemailer/Gmail) - uncomment if you want to use SMTP again.
+const nodemailer = require('nodemailer');
+const transporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true, // Use True for port 465, false for port 587
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    },
+    tls: {
+        // This prevents Render from rejecting self-signed certificates common in cloud routing
+        rejectUnauthorized: false 
+    }
+});
 
 const sendBookingEmail = async (userEmail, userName, eventTitle) => {
     try {
-        const subject = `Booking Confirmed: ${eventTitle}`;
-        const html = `
-            <h2>Hi ${userName}!</h2>
-            <p>Your booking for the event <strong>${eventTitle}</strong> is successfully confirmed.</p>
-            <p>Thank you for choosing Eventora.</p>
-        `;
-        
-        await sendNativeEmail(userEmail, userName, subject, html);
-        console.log(`Booking email successfully sent to ${userEmail}`);
+        const emailOptions = {
+            from: fromEmail,
+            to: userEmail,
+            subject: `Booking Confirmed: ${eventTitle}`,
+            html: `
+        <h2>Hi ${userName}!</h2>
+        <p>Your booking for the event <strong>${eventTitle}</strong> is successfully confirmed.</p>
+        <p>Thank you for choosing Eventora.</p>
+      `
+        };
+
+        // await resend.emails.send(emailOptions);
+        await transporter.sendMail(emailOptions);
+        console.log('Email sent successfully to', userEmail);
     } catch (error) {
-        console.error('Failed to send booking email:', error);
+        console.error('Error sending email:', error);
     }
 };
 
@@ -86,22 +52,29 @@ const sendOTPEmail = async (userEmail, otp, type) => {
             ? 'Please use the following OTP to verify your new Eventora account.'
             : 'Please use the following OTP to verify and confirm your event booking.';
 
-        const html = `
-            <div style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
-                <h2 style="color: #111;">${title}</h2>
-                <p style="color: #555; font-size: 16px;">${msg}</p>
-                <div style="margin: 20px auto; padding: 15px; font-size: 24px; font-weight: bold; background: #f4f4f4; width: max-content; letter-spacing: 5px;">
-                    ${otp}
+        const emailOptions = {
+            from: fromEmail,
+            to: userEmail,
+            subject: title,
+            html: `
+                <div style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
+                    <h2 style="color: #111;">${title}</h2>
+                    <p style="color: #555; font-size: 16px;">${msg}</p>
+                    <div style="margin: 20px auto; padding: 15px; font-size: 24px; font-weight: bold; background: #f4f4f4; width: max-content; letter-spacing: 5px;">
+                        ${otp}
+                    </div>
+                    <p style="color: #999; font-size: 12px;">This code expires in 5 minutes. If you didn't request this, please ignore this email.</p>
                 </div>
-                <p style="color: #999; font-size: 12px;">This code expires in 5 minutes. If you didn't request this, please ignore this email.</p>
-            </div>
-        `;
+            `
+        };
 
-        await sendNativeEmail(userEmail, 'User', title, html);
-        console.log(`OTP successfully sent to ${userEmail}`);
+        // await resend.emails.send(emailOptions);
+        await transporter.sendMail(emailOptions);
+        console.log(`OTP sent to ${userEmail} for ${type}`);
     } catch (error) {
-        console.error('Failed to send OTP email:', error);
+        console.error('Error sending OTP email:', error);
     }
 };
 
 module.exports = { sendBookingEmail, sendOTPEmail };
+
